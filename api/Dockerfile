@@ -1,0 +1,28 @@
+FROM node:18-alpine AS development
+
+WORKDIR /app
+
+RUN apk add --no-cache curl
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+FROM node:18-alpine AS production
+
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+
+WORKDIR /app
+
+COPY --from=development /app/node_modules ./node_modules
+COPY --from=development /app/dist ./dist
+COPY package*.json ./
+
+EXPOSE 3000
+
+CMD ["node", "dist/main"]
