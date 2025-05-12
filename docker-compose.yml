@@ -120,6 +120,19 @@ services:
     networks:
       - app-network
     restart: unless-stopped
+  
+  kibana-setup:
+    image: curlimages/curl:latest
+    container_name: order-management-kibana-setup
+    volumes:
+      - ./kibana-setup.sh:/kibana-setup.sh
+    command: ["sh", "/kibana-setup.sh"]
+    depends_on:
+      - elasticsearch
+      - kibana
+    networks:
+      - app-network
+    restart: on-failure
 
   # Prometheus 
   prometheus:
