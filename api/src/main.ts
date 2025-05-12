@@ -26,8 +26,10 @@ async function bootstrap() {
     .setTitle('API de Gerenciamento de Pedidos')
     .setDescription('API RESTful para gerenciamento de pedidos com integração Kafka e Elasticsearch')
     .setVersion('1.0')
-    .addTag('pedidos')
-    .addTag('system')
+    .addTag('Pedidos', 'Operações relacionadas a pedidos')
+    .addTag('System', 'Endpoints do sistema')
+    .setContact('Suporte Técnico', '', 'jeancarlosbalchiero@gmail.com')
+    .setExternalDoc('Documentação adicional', 'https://github.com/jesbalchiero/starsoft-backend-challenge/blob/main/README.md')
     .build();
   
   const document = SwaggerModule.createDocument(app, swaggerConfig);
