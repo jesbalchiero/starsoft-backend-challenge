@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { OrdersModule } from './orders/orders.module';
+import { KafkaModule } from './infrastructure/kafka/kafka.module';
+import { ElasticsearchModule } from './infrastructure/elasticsearch/elasticsearch.module';
+import { LoggingModule } from './infrastructure/logging/logging.module';
+import { MonitoringModule } from './infrastructure/monitoring/monitoring.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -25,11 +30,11 @@ import { AppController } from './app.controller';
       }),
     }),
     
-    // OrdersModule,
-    // KafkaModule,
-    // ElasticsearchModule,
-    // LoggingModule,
-    // MonitoringModule
+    OrdersModule,
+    KafkaModule,
+    ElasticsearchModule,
+    LoggingModule,
+    MonitoringModule
   ],
   controllers: [AppController],
 })
