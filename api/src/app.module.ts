@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { OrdersModule } from './orders/orders.module';
+import { KafkaModule } from './infrastructure/kafka/kafka.module';
+import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 @Module({
   imports: [
@@ -25,8 +27,10 @@ import { OrdersModule } from './orders/orders.module';
         logging: configService.get<string>('NODE_ENV') === 'development',
       }),
     }),
-    
+
     OrdersModule,
+    KafkaModule,
+    ElasticsearchModule,
   ],
   controllers: [AppController],
 })

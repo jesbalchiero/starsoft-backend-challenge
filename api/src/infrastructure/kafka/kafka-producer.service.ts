@@ -94,7 +94,7 @@ export class KafkaProducerService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(`Mensagem publicada com sucesso no tópico ${topic}`);
     } catch (error) {
       this.logger.error(`Falha ao publicar mensagem no tópico ${topic}: ${error.message}`, error.stack);
-      this.isConnected = false;
+      this.isConnected = false; 
     }
   }
 }

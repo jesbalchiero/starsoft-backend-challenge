@@ -2,25 +2,32 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasticsearch';
 import { Order } from '../../orders/entities/order.entity';
 import { FilterOrderDto } from '../../orders/dto/filter-order.dto';
-import { IElasticsearchService } from './elasticsearch.interface';
 
 @Injectable()
-export class ElasticsearchService implements OnModuleInit, IElasticsearchService {
+export class ElasticsearchService implements OnModuleInit {
   private readonly logger = new Logger(ElasticsearchService.name);
   private readonly indexName = 'orders';
+  private isConnected = false;
 
   constructor(private readonly elasticsearchService: NestElasticsearchService) {}
 
   async onModuleInit() {
     try {
+      const health = await this.elasticsearchService.cluster.health();
+      this.logger.log(`Elasticsearch status: ${health.body.status}`);
+      this.isConnected = true;
+      
       const indexExists = await this.indexExists();
       
       if (!indexExists) {
         await this.createIndex();
-        this.logger.log(`Index ${this.indexName} created successfully`);
+        this.logger.log(`Índice ${this.indexName} criado com sucesso`);
+      } else {
+        this.logger.log(`Índice ${this.indexName} já existe`);
       }
     } catch (error) {
-      this.logger.error(`Failed to initialize Elasticsearch index: ${error.message}`, error.stack);
+      this.logger.error(`Falha ao inicializar Elasticsearch: ${error.message}`, error.stack);
+      this.isConnected = false;
     }
   }
 
@@ -31,64 +38,79 @@ export class ElasticsearchService implements OnModuleInit, IElasticsearchService
       });
       return !!body;
     } catch (error) {
+      this.logger.error(`Erro ao verificar se o índice existe: ${error.message}`, error.stack);
       return false;
     }
   }
 
   private async createIndex(): Promise<void> {
-    const settings = {
-      settings: {
-        number_of_shards: 1,
-        number_of_replicas: 1,
-      },
-      mappings: {
-        properties: {
-          id: { type: 'keyword' },
-          customerName: { type: 'text', analyzer: 'standard' },
-          customerEmail: { type: 'keyword' },
-          customerPhone: { type: 'keyword' },
-          status: { type: 'keyword' },
-          totalAmount: { type: 'float' },
-          shippingAddress: { type: 'text', analyzer: 'standard' },
-          notes: { type: 'text', analyzer: 'standard' },
-          createdAt: { type: 'date' },
-          updatedAt: { type: 'date' },
-          items: {
-            type: 'nested',
-            properties: {
-              id: { type: 'keyword' },
-              productId: { type: 'keyword' },
-              productName: { type: 'text', analyzer: 'standard' },
-              unitPrice: { type: 'float' },
-              quantity: { type: 'integer' },
-              subtotal: { type: 'float' },
+    try {
+      const settings = {
+        settings: {
+          number_of_shards: 1,
+          number_of_replicas: 1,
+        },
+        mappings: {
+          properties: {
+            id: { type: 'keyword' },
+            customerName: { type: 'text', analyzer: 'standard' },
+            customerEmail: { type: 'keyword' },
+            customerPhone: { type: 'keyword' },
+            status: { type: 'keyword' },
+            totalAmount: { type: 'float' },
+            shippingAddress: { type: 'text', analyzer: 'standard' },
+            notes: { type: 'text', analyzer: 'standard' },
+            createdAt: { type: 'date' },
+            updatedAt: { type: 'date' },
+            items: {
+              type: 'nested',
+              properties: {
+                id: { type: 'keyword' },
+                productId: { type: 'keyword' },
+                productName: { type: 'text', analyzer: 'standard' },
+                unitPrice: { type: 'float' },
+                quantity: { type: 'integer' },
+                subtotal: { type: 'float' },
+              },
             },
           },
         },
-      },
-    };
+      };
 
-    await this.elasticsearchService.indices.create({
-      index: this.indexName,
-      body: settings,
-    });
+      await this.elasticsearchService.indices.create({
+        index: this.indexName,
+        body: settings,
+      });
+    } catch (error) {
+      this.logger.error(`Erro ao criar o índice: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async indexOrder(order: Order): Promise<void> {
+    if (!this.isConnected) {
+      this.logger.warn(`Não foi possível indexar o pedido ${order.id}: Elasticsearch não está disponível`);
+      return;
+    }
+    
     try {
       await this.elasticsearchService.index({
         index: this.indexName,
         id: order.id,
         body: order,
       });
-      this.logger.debug(`Order ${order.id} indexed successfully`);
+      this.logger.debug(`Pedido ${order.id} indexado com sucesso`);
     } catch (error) {
-      this.logger.error(`Failed to index order ${order.id}: ${error.message}`, error.stack);
-      throw error;
+      this.logger.error(`Falha ao indexar pedido ${order.id}: ${error.message}`, error.stack);
     }
   }
 
   async updateOrderIndex(order: Order): Promise<void> {
+    if (!this.isConnected) {
+      this.logger.warn(`Não foi possível atualizar o índice do pedido ${order.id}: Elasticsearch não está disponível`);
+      return;
+    }
+    
     try {
       await this.elasticsearchService.update({
         index: this.indexName,
@@ -97,33 +119,41 @@ export class ElasticsearchService implements OnModuleInit, IElasticsearchService
           doc: order,
         },
       });
-      this.logger.debug(`Order ${order.id} index updated successfully`);
+      this.logger.debug(`Índice do pedido ${order.id} atualizado com sucesso`);
     } catch (error) {
-      this.logger.error(`Failed to update order ${order.id} index: ${error.message}`, error.stack);
+      this.logger.error(`Falha ao atualizar índice do pedido ${order.id}: ${error.message}`, error.stack);
       
-      if (error.statusCode === 404) 
+      if (error.statusCode === 404) {
         await this.indexOrder(order);
-      else
-        throw error;
+      }
     }
   }
 
   async removeOrderIndex(id: string): Promise<void> {
+    if (!this.isConnected) {
+      this.logger.warn(`Não foi possível remover o índice do pedido ${id}: Elasticsearch não está disponível`);
+      return;
+    }
+    
     try {
       await this.elasticsearchService.delete({
         index: this.indexName,
         id,
       });
-      this.logger.debug(`Order ${id} removed from index successfully`);
+      this.logger.debug(`Índice do pedido ${id} removido com sucesso`);
     } catch (error) {
       if (error.statusCode !== 404) {
-        this.logger.error(`Failed to remove order ${id} from index: ${error.message}`, error.stack);
-        throw error;
+        this.logger.error(`Falha ao remover índice do pedido ${id}: ${error.message}`, error.stack);
       }
     }
   }
 
   async search(filterDto: FilterOrderDto): Promise<Order[]> {
+    if (!this.isConnected) {
+      this.logger.warn(`Não foi possível realizar a busca: Elasticsearch não está disponível`);
+      return [];
+    }
+    
     try {
       const searchParams: any = {
         index: this.indexName,
@@ -142,22 +172,32 @@ export class ElasticsearchService implements OnModuleInit, IElasticsearchService
         } as Order;
       });
     } catch (error) {
-      this.logger.error(`Failed to search orders: ${error.message}`, error.stack);
-      throw error;
+      this.logger.error(`Falha ao buscar pedidos: ${error.message}`, error.stack);
+      return [];
     }
   }
 
   private buildQuery(filterDto: FilterOrderDto): any {
     const must: any[] = [];
 
-    if (filterDto.id) must.push({ term: { id: filterDto.id } });
-    if (filterDto.status) must.push({ term: { status: filterDto.status } });
+    if (filterDto.id) {
+      must.push({ term: { id: filterDto.id } });
+    }
+
+    if (filterDto.status) {
+      must.push({ term: { status: filterDto.status } });
+    }
 
     if (filterDto.startDate || filterDto.endDate) {
       const range: any = { createdAt: {} };
       
-      if (filterDto.startDate) range.createdAt.gte = filterDto.startDate.toISOString();
-      if (filterDto.endDate) range.createdAt.lte = filterDto.endDate.toISOString();
+      if (filterDto.startDate) {
+        range.createdAt.gte = filterDto.startDate.toISOString();
+      }
+      
+      if (filterDto.endDate) {
+        range.createdAt.lte = filterDto.endDate.toISOString();
+      }
       
       must.push({ range });
     }

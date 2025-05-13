@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ElasticsearchModule as NestElasticsearchModule } from '@nestjs/elasticsearch';
 import { ElasticsearchService } from './elasticsearch.service';
-import { ELASTICSEARCH_SERVICE } from './elasticsearch.interface';
 
 @Module({
   imports: [
@@ -16,12 +15,7 @@ import { ELASTICSEARCH_SERVICE } from './elasticsearch.interface';
       }),
     }),
   ],
-  providers: [
-    ElasticsearchService, {
-      provide: ELASTICSEARCH_SERVICE,
-      useClass: ElasticsearchService,
-    }
-  ],
-  exports: [ElasticsearchService, ELASTICSEARCH_SERVICE],
+  providers: [ElasticsearchService],
+  exports: [ElasticsearchService],
 })
 export class ElasticsearchModule {}
