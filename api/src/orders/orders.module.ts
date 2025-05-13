@@ -10,8 +10,6 @@ import { OrdersRepository } from './orders.repository';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Order, OrderItem]),
-    // KafkaModule,
-    // ElasticsearchModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrdersRepository],

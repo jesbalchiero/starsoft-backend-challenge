@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, LessThanOrEqual, MoreThanOrEqual, Like } from 'typeorm';
+import { Repository, Between, Like } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -44,16 +44,16 @@ export class OrdersRepository {
     });
   }
 
-  async findById(id: string): Promise<Order | null> {
+  async findById(id: string): Promise<Order> {
     return this.orderRepository.findOne({ where: { id } });
   }
 
-  async update(id: string, updateOrderDto: UpdateOrderDto): Promise<Order | null> {
+  async update(id: string, updateOrderDto: UpdateOrderDto): Promise<Order> {
     const order = await this.findById(id);
     
     if (!order) return null;
 
-    if (updateOrderDto.status) order.status = updateOrderDto.status;
+    if (updateOrderDto.status)  order.status = updateOrderDto.status;
     if (updateOrderDto.shippingAddress) order.shippingAddress = updateOrderDto.shippingAddress;
     if (updateOrderDto.notes) order.notes = updateOrderDto.notes;
 
@@ -62,7 +62,7 @@ export class OrdersRepository {
 
   async remove(id: string): Promise<boolean> {
     const result = await this.orderRepository.delete(id);
-    return (result.affected ?? 0) > 0;
+    return result.affected > 0;
   }
 
   async filter(filterDto: FilterOrderDto): Promise<Order[]> {

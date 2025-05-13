@@ -2,9 +2,10 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ElasticsearchService as NestElasticsearchService } from '@nestjs/elasticsearch';
 import { Order } from '../../orders/entities/order.entity';
 import { FilterOrderDto } from '../../orders/dto/filter-order.dto';
+import { IElasticsearchService } from './elasticsearch.interface';
 
 @Injectable()
-export class ElasticsearchService implements OnModuleInit {
+export class ElasticsearchService implements OnModuleInit, IElasticsearchService {
   private readonly logger = new Logger(ElasticsearchService.name);
   private readonly indexName = 'orders';
 
@@ -100,11 +101,10 @@ export class ElasticsearchService implements OnModuleInit {
     } catch (error) {
       this.logger.error(`Failed to update order ${order.id} index: ${error.message}`, error.stack);
       
-      if (error.statusCode === 404) {
+      if (error.statusCode === 404) 
         await this.indexOrder(order);
-      } else {
+      else
         throw error;
-      }
     }
   }
 
@@ -123,68 +123,70 @@ export class ElasticsearchService implements OnModuleInit {
     }
   }
 
-  async search(filterDto: FilterOrderDto): Promise<any> {
+  async search(filterDto: FilterOrderDto): Promise<Order[]> {
     try {
-      const must = [];
-
-      if (filterDto.id) must.push({ term: { id: filterDto.id } });
-      if (filterDto.status) must.push({ term: { status: filterDto.status } });
-
-      if (filterDto.startDate || filterDto.endDate) {
-        const range: any = { createdAt: {} };
-        
-        if (filterDto.startDate) range.createdAt.gte = filterDto.startDate.toISOString();
-        if (filterDto.endDate) range.createdAt.lte = filterDto.endDate.toISOString();
-        
-        must.push({ range });
-      }
-
-      if (filterDto.item) {
-        must.push({
-          nested: {
-            path: 'items',
-            query: {
-              bool: {
-                should: [
-                  { match: { 'items.productName': filterDto.item } },
-                  { term: { 'items.productId': filterDto.item } },
-                ],
-              },
-            },
-          },
-        });
-      }
-
-      if (filterDto.query) {
-        must.push({
-          multi_match: {
-            query: filterDto.query,
-            fields: ['customerName', 'customerEmail', 'shippingAddress', 'notes'],
-          },
-        });
-      }
-
-      const query = {
-        bool: {
-          must,
-        },
-      };
-
-      const { body } = await this.elasticsearchService.search({
+      const searchParams: any = {
         index: this.indexName,
         body: {
-          query,
-          sort: [{ createdAt: { order: 'desc' } }],
-        },
-      });
+          query: this.buildQuery(filterDto),
+          sort: [{ createdAt: { order: 'desc' } }]
+        }
+      };
 
-      return body.hits.hits.map(hit => ({
-        ...hit._source,
-        score: hit._score,
-      }));
+      const { body } = await this.elasticsearchService.search(searchParams);
+      
+      return body.hits.hits.map((hit: any) => {
+        return {
+          ...hit._source,
+          score: hit._score
+        } as Order;
+      });
     } catch (error) {
       this.logger.error(`Failed to search orders: ${error.message}`, error.stack);
       throw error;
     }
+  }
+
+  private buildQuery(filterDto: FilterOrderDto): any {
+    const must: any[] = [];
+
+    if (filterDto.id) must.push({ term: { id: filterDto.id } });
+    if (filterDto.status) must.push({ term: { status: filterDto.status } });
+
+    if (filterDto.startDate || filterDto.endDate) {
+      const range: any = { createdAt: {} };
+      
+      if (filterDto.startDate) range.createdAt.gte = filterDto.startDate.toISOString();
+      if (filterDto.endDate) range.createdAt.lte = filterDto.endDate.toISOString();
+      
+      must.push({ range });
+    }
+
+    if (filterDto.item) {
+      must.push({
+        nested: {
+          path: 'items',
+          query: {
+            bool: {
+              should: [
+                { match: { 'items.productName': filterDto.item } },
+                { term: { 'items.productId': filterDto.item } },
+              ],
+            },
+          },
+        },
+      });
+    }
+
+    if (filterDto.query) {
+      must.push({
+        multi_match: {
+          query: filterDto.query,
+          fields: ['customerName', 'customerEmail', 'shippingAddress', 'notes'],
+        },
+      });
+    }
+
+    return must.length > 0 ? { bool: { must } } : { match_all: {} };
   }
 }
