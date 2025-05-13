@@ -24,13 +24,16 @@ export class OrdersService {
     
     try {
       await this.kafkaProducerService.publish('order_created', {
-        orderId: order.id,
-        customerName: order.customerName,
-        customerEmail: order.customerEmail,
-        totalAmount: order.totalAmount,
-        status: order.status,
-        items: order.items,
-        createdAt: order.createdAt,
+        key: order.id, 
+        value: JSON.stringify({
+          orderId: order.id,
+          customerName: order.customerName,
+          customerEmail: order.customerEmail,
+          totalAmount: order.totalAmount,
+          status: order.status,
+          items: order.items,
+          createdAt: order.createdAt,
+        })
       });
       
       this.logger.log(`Evento order_created publicado para o pedido ${order.id}`);
@@ -79,10 +82,13 @@ export class OrdersService {
     try {
       if (updateOrderDto.status && updateOrderDto.status !== existingOrder.status) {
         await this.kafkaProducerService.publish('order_status_updated', {
-          orderId: updatedOrder.id,
-          previousStatus: existingOrder.status,
-          currentStatus: updatedOrder.status,
-          updatedAt: updatedOrder.updatedAt,
+          key: updatedOrder.id, 
+          value: JSON.stringify({
+            orderId: updatedOrder.id,
+            previousStatus: existingOrder.status,
+            currentStatus: updatedOrder.status,
+            updatedAt: updatedOrder.updatedAt,
+          })
         });
         
         this.logger.log(`Evento order_status_updated publicado para o pedido ${id}`);
@@ -118,6 +124,19 @@ export class OrdersService {
     } catch (error) {
       this.logger.error(`Erro ao remover pedido ${id} do Elasticsearch: ${error.message}`, error.stack);
     }
+    
+    try {
+      await this.kafkaProducerService.publish('order_deleted', {
+        key: id,
+        value: JSON.stringify({
+          orderId: id,
+          deletedAt: new Date().toISOString()
+        })
+      });
+      this.logger.log(`Evento order_deleted publicado para o pedido ${id}`);
+    } catch (error) {
+      this.logger.error(`Erro ao publicar evento de remoção no Kafka para o pedido ${id}: ${error.message}`, error.stack);
+    }
   }
 
   async search(filterDto: FilterOrderDto): Promise<Order[]> {
@@ -130,11 +149,12 @@ export class OrdersService {
         this.logger.log(`${elasticResults.length} pedidos encontrados no Elasticsearch`);
         return elasticResults;
       }
+      this.logger.log('Nenhum resultado encontrado no Elasticsearch, usando busca no banco de dados');
     } catch (error) {
       this.logger.warn(`Busca no Elasticsearch falhou, usando busca no banco de dados: ${error.message}`);
     }
 
-    this.logger.log('Usando fallback para busca no banco de dados');
+    this.logger.log('Buscando no banco de dados relacional');
     return this.ordersRepository.filter(filterDto);
   }
 }

@@ -6,8 +6,8 @@ import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { OrdersRepository } from './orders.repository';
 import { KafkaModule } from '@app/infrastructure/kafka/kafka.module';
-import { ElasticsearchModule } from '@nestjs/elasticsearch';
 import { KafkaProducerService } from '@app/infrastructure/kafka/kafka-producer.service';
+import { ElasticsearchModule } from '@app/infrastructure/elasticsearch/elasticsearch.module';
 
 
 @Module({

@@ -4,12 +4,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { OrdersModule } from './orders/orders.module';
 import { KafkaModule } from './infrastructure/kafka/kafka.module';
-import { ElasticsearchModule } from '@nestjs/elasticsearch';
+import { ElasticsearchModule } from './infrastructure/elasticsearch/elasticsearch.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: '.env',
     }),
     
     TypeOrmModule.forRootAsync({

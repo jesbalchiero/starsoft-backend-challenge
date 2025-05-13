@@ -12,7 +12,7 @@ COPY . .
 
 RUN chmod +x entrypoint.sh
 
-RUN npm run build || echo "Aviso: Compilação falhou, mas continuaremos usando o modo de desenvolvimento"
+RUN npm run build
 
 EXPOSE 3000
 

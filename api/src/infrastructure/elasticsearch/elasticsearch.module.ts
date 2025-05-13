@@ -5,14 +5,8 @@ import { ElasticsearchService } from './elasticsearch.service';
 
 @Module({
   imports: [
-    NestElasticsearchModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        node: configService.get<string>('ELASTICSEARCH_NODE', 'http://elasticsearch:9200'),
-        maxRetries: 10,
-        requestTimeout: 60000,
-      }),
+    NestElasticsearchModule.register({
+      node: 'http://elasticsearch:9200',
     }),
   ],
   providers: [ElasticsearchService],

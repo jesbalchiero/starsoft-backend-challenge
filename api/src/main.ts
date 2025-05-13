@@ -11,14 +11,12 @@ async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
       cors: true,
     });
-    console.log('Aplicação Nest.js criada com sucesso.');
 
     app.useGlobalPipes(new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
     }));
-    console.log('Pipe de validação configurado.');
 
     const config = new DocumentBuilder()
       .setTitle('API de Gerenciamento de Pedidos')
@@ -28,7 +26,6 @@ async function bootstrap() {
     
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api-docs', app, document);
-    console.log('Swagger configurado.');
 
     await app.listen(3000);
     console.log(`Aplicação rodando em: ${await app.getUrl()}`);
