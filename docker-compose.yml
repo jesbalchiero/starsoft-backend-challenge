@@ -113,7 +113,7 @@ services:
         soft: -1
         hard: -1
 
-  # Kibana 
+  # Kibana
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.0
     container_name: order-management-kibana
@@ -126,7 +126,7 @@ services:
     networks:
       - app-network
     restart: unless-stopped
-  
+
   kibana-setup:
     image: curlimages/curl:latest
     container_name: order-management-kibana-setup
@@ -140,7 +140,7 @@ services:
       - app-network
     restart: on-failure
 
-  # Prometheus 
+  # Prometheus
   prometheus:
     image: prom/prometheus:latest
     container_name: order-management-prometheus

@@ -155,6 +155,7 @@ export class OrdersService {
     }
 
     this.logger.log('Buscando no banco de dados relacional');
+    console.log('Buscando no banco de dados relacional');
     return this.ordersRepository.filter(filterDto);
   }
 }
